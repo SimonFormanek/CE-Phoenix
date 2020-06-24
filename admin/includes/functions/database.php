@@ -5,7 +5,7 @@
   osCommerce, Open Source E-Commerce Solutions
   http://www.oscommerce.com
 
-  Copyright (c) 2013 osCommerce
+  Copyright (c) 2020 osCommerce
 
   Released under the GNU General Public License
 */
@@ -23,7 +23,7 @@
       mysqli_set_charset($$link, 'utf8');
     }
 
-    @mysqli_query($$link, 'set session sql_mode=""');
+    @mysqli_query($$link, 'SET SESSION sql_mode=""');
 
     return $$link;
   }
@@ -48,7 +48,7 @@
     global $$link, $logger;
 
     if (defined('STORE_DB_TRANSACTIONS') && (STORE_DB_TRANSACTIONS == 'true')) {
-      if (!is_object($logger)) $logger = new logger;
+      if (!is_object($logger)) $logger = new logger();
       $logger->write($query, 'QUERY');
     }
 
@@ -59,44 +59,70 @@
 
   function tep_db_perform($table, $data, $action = 'insert', $parameters = '', $link = 'db_link') {
     if ($action == 'insert') {
-      $query = 'insert into ' . $table . ' (';
-      foreach (array_keys($data) as $columns) {
-        $query .= $columns . ', ';
-      }
-      $query = substr($query, 0, -2) . ') values (';
+      $query = 'INSERT INTO ' . $table . ' (' . implode(', ', array_keys($data)) . ') VALUES (';
+
       foreach ($data as $value) {
         switch ((string)$value) {
+          case 'NOW()':
           case 'now()':
-            $query .= 'now(), ';
+            $query .= 'NOW(), ';
             break;
+          case 'NULL':
           case 'null':
-            $query .= 'null, ';
+            $query .= 'NULL, ';
             break;
           default:
             $query .= '\'' . tep_db_input($value) . '\', ';
             break;
         }
       }
-      $query = substr($query, 0, -2) . ')';
+      $query = substr($query, 0, -strlen(', ')) . ')';
     } elseif ($action == 'update') {
-      $query = 'update ' . $table . ' set ';
-      foreach ($data as $columns => $value) {
+      $query = 'UPDATE ' . $table . ' SET ';
+      foreach ($data as $column => $value) {
         switch ((string)$value) {
+          case 'NOW()':
           case 'now()':
-            $query .= $columns . ' = now(), ';
+            $query .= $column . ' = NOW(), ';
             break;
+          case 'NULL':
           case 'null':
-            $query .= $columns .= ' = null, ';
+            $query .= $column . ' = NULL, ';
             break;
           default:
-            $query .= $columns . ' = \'' . tep_db_input($value) . '\', ';
+            $query .= $column . ' = \'' . tep_db_input($value) . '\', ';
             break;
         }
       }
-      $query = substr($query, 0, -2) . ' where ' . $parameters;
+      $query = substr($query, 0, -strlen(', ')) . ' WHERE ' . $parameters;
     }
 
     return tep_db_query($query, $link);
+  }
+
+  function tep_db_copy($db, $key, $value) {
+    $key_value = false;
+    foreach ($db as $table => $columns) {
+      $values = [];
+      foreach ($columns as $name => $v) {
+        if ($key_value && ($name === $key) && is_null($v)) {
+          $v = $key_value;
+        }
+
+        $values[] = ($v ?? $name);
+      }
+
+      tep_db_query('INSERT INTO ' . $table
+        . ' (' . implode(', ', array_keys($columns))
+        . ') SELECT ' . implode(', ', $values)
+        . ' FROM ' . $table . ' WHERE ' . $key . ' = ' . $value);
+
+      if (!$key_value) {
+        $key_value = tep_db_insert_id();
+      }
+    }
+
+    return $key_value;
   }
 
   function tep_db_fetch_array($db_query) {
@@ -149,14 +175,15 @@
   function tep_db_prepare_input($string) {
     if (is_string($string)) {
       return trim(stripslashes($string));
-    } elseif (is_array($string)) {
+    }
+
+    if (is_array($string)) {
       foreach ($string as $key => $value) {
         $string[$key] = tep_db_prepare_input($value);
       }
-      return $string;
-    } else {
-      return $string;
     }
+
+    return $string;
   }
 
   function tep_db_affected_rows($link = 'db_link') {
@@ -170,4 +197,3 @@
 
     return mysqli_get_server_info($$link);
   }
-?>

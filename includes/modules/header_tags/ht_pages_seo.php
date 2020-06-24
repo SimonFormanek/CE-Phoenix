@@ -21,7 +21,7 @@
     function __construct() {
       $this->title = MODULE_HEADER_TAGS_PAGES_SEO_TITLE;
       $this->description = MODULE_HEADER_TAGS_PAGES_SEO_DESCRIPTION;
-      $this->description .= '<div class="secWarning">' . MODULE_HEADER_TAGS_PAGES_SEO_HELPER . '</div>';
+      $this->description .= '<div class="alert alert-warning">' . MODULE_HEADER_TAGS_PAGES_SEO_HELPER . '</div>';
 
       if ( defined('MODULE_HEADER_TAGS_PAGES_SEO_STATUS') ) {
         $this->sort_order = MODULE_HEADER_TAGS_PAGES_SEO_SORT_ORDER;
@@ -38,10 +38,6 @@
       if ( (defined('META_SEO_DESCRIPTION')) && (strlen(META_SEO_DESCRIPTION) > 0) ) {
         $oscTemplate->addBlock('<meta name="description" content="' . tep_output_string(META_SEO_DESCRIPTION) . '" />' . "\n", $this->group);
       }
-      if ( (defined('META_SEO_KEYWORDS')) && (strlen(META_SEO_KEYWORDS) > 0) ) {
-        $oscTemplate->addBlock('<meta name="keywords" content="' . tep_output_string(META_SEO_KEYWORDS) . '" />' . "\n", $this->group);
-      }
-
     }
 
     function isEnabled() {
