@@ -12,20 +12,14 @@
 
   require 'includes/application_top.php';
 
-// if the customer is not logged on, redirect them to the login page
-  $OSCOM_Hooks->register_pipeline('loginRequired');
-
-// if there is nothing in the customers cart, redirect them to the shopping cart page
-  if ($_SESSION['cart']->count_contents() < 1) {
-    tep_redirect(tep_href_link('shopping_cart.php'));
-  }
+  require 'includes/system/segments/checkout/pipeline.php';
 
   if (!$customer_data->has('address')) {
-    tep_redirect(tep_href_link('checkout_payment.php', '', 'SSL'));
+    tep_redirect(tep_href_link('checkout_payment.php'));
   }
 
   // needs to be included earlier to set the success message in the messageStack
-  require "includes/languages/$language/checkout_payment_address.php";
+  require language::map_to_translation('checkout_payment_address.php');
 
   $message_stack_area = 'checkout_address';
 
@@ -42,7 +36,7 @@
 
       unset($_SESSION['payment']);
 
-      tep_redirect(tep_href_link('checkout_payment.php', '', 'SSL'));
+      tep_redirect(tep_href_link('checkout_payment.php'));
     } elseif (isset($_POST['address'])) {
       // process the selected billing destination
       $reset_payment = isset($_SESSION['billto']) && ($_SESSION['billto'] != $_POST['address']) && isset($_SESSION['payment']);
@@ -52,7 +46,7 @@
         if ($reset_payment) {
           unset($_SESSION['payment']);
         }
-        tep_redirect(tep_href_link('checkout_payment.php', '', 'SSL'));
+        tep_redirect(tep_href_link('checkout_payment.php'));
       } else {
         unset($_SESSION['billto']);
       }

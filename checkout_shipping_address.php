@@ -12,26 +12,10 @@
 
   require 'includes/application_top.php';
 
-// if the customer is not logged on, redirect them to the login page
-  $OSCOM_Hooks->register_pipeline('loginRequired');
-
-// if there is nothing in the customer's cart, redirect to the shopping cart page
-  if ($_SESSION['cart']->count_contents() < 1) {
-    tep_redirect(tep_href_link('shopping_cart.php'));
-  }
+  require 'includes/system/segments/checkout/pipeline.php';
 
   // needs to be included earlier to set the success message in the messageStack
-  require "includes/languages/$language/checkout_shipping_address.php";
-
-  $order = new order();
-
-// if the order contains only virtual products, forward the customer to the billing page as
-// a shipping address is not needed
-  if ($order->content_type == 'virtual') {
-    $_SESSION['shipping'] = false;
-    $_SESSION['sendto'] = false;
-    tep_redirect(tep_href_link('checkout_payment.php', '', 'SSL'));
-  }
+  require language::map_to_translation('checkout_shipping_address.php');
 
   $message_stack_area = 'checkout_address';
 
@@ -49,7 +33,7 @@
 
       unset($_SESSION['shipping']);
 
-      tep_redirect(tep_href_link('checkout_shipping.php', '', 'SSL'));
+      tep_redirect(tep_href_link('checkout_shipping.php'));
     }
   } elseif (isset($_POST['address']) && tep_validate_form_action_is('select')) {
     // change to the selected shipping destination
@@ -61,7 +45,7 @@
         unset($_SESSION['shipping']);
       }
 
-      tep_redirect(tep_href_link('checkout_shipping.php', '', 'SSL'));
+      tep_redirect(tep_href_link('checkout_shipping.php'));
     } else {
       unset($_SESSION['sendto']);
     }

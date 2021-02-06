@@ -10,7 +10,12 @@
   Released under the GNU General Public License
 */
 
-  if (STORE_SESSIONS == 'mysql') {
+  if (defined('DIR_FS_SESSION') && DIR_FS_SESSION && is_dir(DIR_FS_SESSION) && is_writable(DIR_FS_SESSION)) {
+    session_save_path(DIR_FS_SESSION);
+  } else {
+    // if we don't have a usable session directory defined,
+    // use MySQL sessions
+    // Note:  this is the default configuration in the normal install process.
     function _sess_open($save_path, $session_name) {
       return true;
     }
@@ -21,7 +26,7 @@
 
     function _sess_read($key) {
       $value_query = tep_db_query("SELECT value FROM sessions WHERE sesskey = '" . tep_db_input($key) . "'");
-      $value = tep_db_fetch_array($value_query);
+      $value = $value_query->fetch_assoc();
 
       return $value['value'] ?? '';
     }
@@ -85,6 +90,7 @@
   }
 
   function tep_session_register($variable) {
+    trigger_error('The tep_session_register function has been deprecated.', E_USER_DEPRECATED);
     global $session_started;
 
     if ($session_started === true) {
@@ -99,10 +105,12 @@
   }
 
   function tep_session_is_registered($variable) {
+    trigger_error('The tep_session_is_registered function has been deprecated.', E_USER_DEPRECATED);
     return isset($_SESSION) && array_key_exists($variable, $_SESSION);
   }
 
   function tep_session_unregister($variable) {
+    trigger_error('The tep_session_unregister function has been deprecated.', E_USER_DEPRECATED);
     unset($_SESSION[$variable]);
   }
 
@@ -115,6 +123,7 @@
   }
 
   function tep_session_name($name = '') {
+    trigger_error('The tep_session_name function has been deprecated.', E_USER_DEPRECATED);
     if (empty($name)) {
       return session_name();
     }
@@ -123,6 +132,7 @@
   }
 
   function tep_session_close() {
+    trigger_error('The tep_session_close function has been deprecated.', E_USER_DEPRECATED);
     return session_write_close();
   }
 
@@ -138,6 +148,7 @@
   }
 
   function tep_session_save_path($path = '') {
+    trigger_error('The tep_session_save_path function has been deprecated.', E_USER_DEPRECATED);
     if (empty($path)) {
       return session_save_path();
     }
@@ -146,19 +157,21 @@
   }
 
   function tep_session_recreate() {
-    global $SID;
+    if (SESSION_RECREATE !== 'True') {
+      return;
+    }
 
     $old_id = session_id();
 
     session_regenerate_id(true);
 
-    if (!empty($SID)) {
-      $SID = session_name() . '=' . session_id();
+    if (!empty($GLOBALS['SID'])) {
+      $GLOBALS['SID'] = session_name() . '=' . session_id();
     }
 
     whos_online::update_session_id($old_id, session_id());
   }
 
   function tep_reset_session_token() {
-    $_SESSION['sessiontoken'] = md5(tep_rand() . tep_rand() . tep_rand() . tep_rand());
+    $_SESSION['sessiontoken'] = md5(mt_rand() . mt_rand() . mt_rand() . mt_rand());
   }

@@ -20,7 +20,7 @@
 
   $action = $_GET['action'] ?? '';
 
-  if (tep_not_null($action)) {
+  if (!Text::is_empty($action)) {
     switch ($action) {
       case 'forget':
         tep_db_query("DELETE FROM configuration WHERE configuration_key = 'DB_LAST_RESTORE'");
@@ -51,7 +51,7 @@ EOSQL
         fputs($fp, $schema);
 
         $tables_query = tep_db_query('SHOW TABLES');
-        while ($tables = tep_db_fetch_array($tables_query)) {
+        while ($tables = $tables_query->fetch_assoc()) {
           $table = reset($tables);
 
           $schema = "\n" . 'DROP TABLE IF EXISTS ' . $table . ';' . "\n" .
@@ -59,7 +59,7 @@ EOSQL
 
           $table_list = [];
           $fields_query = tep_db_query("SHOW FIELDS FROM " . $table);
-          while ($fields = tep_db_fetch_array($fields_query)) {
+          while ($fields = $fields_query->fetch_assoc()) {
             $table_list[] = $fields['Field'];
 
             $schema .= '  ' . $fields['Field'] . ' ' . $fields['Type'];
@@ -84,7 +84,7 @@ EOSQL
 // add the keys
           $index = [];
           $keys_query = tep_db_query("SHOW KEYS FROM " . $table);
-          while ($keys = tep_db_fetch_array($keys_query)) {
+          while ($keys = $keys_query->fetch_assoc()) {
             $kname = $keys['Key_name'];
 
             if (!isset($index[$kname])) {
@@ -99,7 +99,7 @@ EOSQL
           foreach ($index as $kname => $info) {
             $schema .= ',' . "\n";
 
-            $columns = implode($info['columns'], ', ');
+            $columns = implode(', ', $info['columns']);
 
             if ($kname == 'PRIMARY') {
               $schema .= '  PRIMARY KEY (' . $columns . ')';
@@ -118,19 +118,19 @@ EOSQL
 // dump the data
           if ( ($table != 'sessions' ) && ($table != 'whos_online') ) {
             $rows_query = tep_db_query("SELECT " . implode(',', $table_list) . " FROM " . $table);
-            while ($rows = tep_db_fetch_array($rows_query)) {
+            while ($rows = $rows_query->fetch_assoc()) {
               $schema = 'INSERT INTO ' . $table . ' (' . implode(', ', $table_list) . ') VALUES (';
 
               foreach ($table_list as $i) {
                 if (!isset($rows[$i])) {
                   $schema .= 'NULL, ';
-                } elseif (tep_not_null($rows[$i])) {
+                } elseif (Text::is_empty($rows[$i])) {
+                  $schema .= "'', ";
+                } else {
                   $row = addslashes($rows[$i]);
                   $row = preg_replace("/\n#/", "\n".'\#', $row);
 
-                  $schema .= '\'' . $row . '\', ';
-                } else {
-                  $schema .= '\'\', ';
+                  $schema .= "'$row', ";
                 }
               }
 
@@ -278,7 +278,7 @@ EOSQL
             tep_db_query($sql_statement);
           }
 
-          tep_session_close();
+          session_write_close();
 
           tep_db_query("DELETE FROM whos_online");
           tep_db_query("DELETE FROM sessions");
@@ -308,7 +308,7 @@ EOSQL
 
             echo $buffer;
 
-            exit;
+            exit();
           }
         } else {
           $messageStack->add(ERROR_DOWNLOAD_LINK_NOT_ACCEPTABLE, 'error');
@@ -343,18 +343,18 @@ EOSQL
   require 'includes/template_top.php';
 ?>
 
-  <h1 class="display-4 mb-2"><?php echo HEADING_TITLE; ?></h1>
-  
+  <h1 class="display-4 mb-2"><?= HEADING_TITLE; ?></h1>
+
   <div class="row no-gutters">
     <div class="col-12 col-sm-8">
       <div class="table-responsive">
         <table class="table table-striped table-hover">
           <thead class="thead-dark">
             <tr>
-              <th><?php echo TABLE_HEADING_TITLE; ?></th>
-              <th><?php echo TABLE_HEADING_FILE_DATE; ?></th>
-              <th class="text-right"><?php echo TABLE_HEADING_FILE_SIZE; ?></th>
-              <th class="text-right"><?php echo TABLE_HEADING_ACTION; ?></th>
+              <th><?= TABLE_HEADING_TITLE; ?></th>
+              <th><?= TABLE_HEADING_FILE_DATE; ?></th>
+              <th class="text-right"><?= TABLE_HEADING_FILE_SIZE; ?></th>
+              <th class="text-right"><?= TABLE_HEADING_ACTION; ?></th>
             </tr>
           </thead>
           <tbody>
@@ -392,10 +392,10 @@ EOSQL
     }
 ?>
             <tr>
-                <td onclick="document.location.href='<?php echo tep_href_link('backup.php', $onclick_link); ?>'"><?php echo '<a href="' . tep_href_link('backup.php', 'action=download&file=' . $entry) . '"><i title="' . ICON_FILE_DOWNLOAD . '" class="fas fa-file-download text-muted"></i></a>&nbsp;' . $entry; ?></td>
-                <td onclick="document.location.href='<?php echo tep_href_link('backup.php', $onclick_link); ?>'"><?php echo date(PHP_DATE_TIME_FORMAT, filemtime(DIR_FS_BACKUP . $entry)); ?></td>
-                <td class="text-right" onclick="document.location.href='<?php echo tep_href_link('backup.php', $onclick_link); ?>'"><?php echo sprintf(TEXT_INFO_BACKUP_SIZE, number_format(filesize(DIR_FS_BACKUP . $entry)/1024000, 2)) ; ?></td>
-                <td class="text-right"><?php echo $icon; ?></td>
+                <td onclick="document.location.href='<?= tep_href_link('backup.php', $onclick_link); ?>'"><?= '<a href="' . tep_href_link('backup.php', 'action=download&file=' . $entry) . '"><i title="' . ICON_FILE_DOWNLOAD . '" class="fas fa-file-download text-muted"></i></a>&nbsp;' . $entry; ?></td>
+                <td onclick="document.location.href='<?= tep_href_link('backup.php', $onclick_link); ?>'"><?= date(PHP_DATE_TIME_FORMAT, filemtime(DIR_FS_BACKUP . $entry)); ?></td>
+                <td class="text-right" onclick="document.location.href='<?= tep_href_link('backup.php', $onclick_link); ?>'"><?= sprintf(TEXT_INFO_BACKUP_SIZE, number_format(filesize(DIR_FS_BACKUP . $entry)/1024000, 2)) ; ?></td>
+                <td class="text-right"><?= $icon; ?></td>
               </tr>
 <?php
   }
@@ -404,9 +404,9 @@ EOSQL
           </tbody>
         </table>
       </div>
-      
+
       <div class="row my-1">
-        <div class="col"><?php echo sprintf(TEXT_BACKUP_DIRECTORY, DIR_FS_BACKUP); ?></div>
+        <div class="col"><?= sprintf(TEXT_BACKUP_DIRECTORY, DIR_FS_BACKUP); ?></div>
         <div class="col text-right mr-2"><?php if ( ($action != 'backup') && $dir_ok && isset($dir) ) echo tep_draw_bootstrap_button(IMAGE_BACKUP, 'fas fa-download', tep_href_link('backup.php', 'action=backup'), null, null, 'btn-light mr-2'); if ( ($action != 'restorelocal') && isset($dir) ) echo tep_draw_bootstrap_button(IMAGE_RESTORE, 'fas fa-upload', tep_href_link('backup.php', 'action=restorelocal'), null, null, 'btn-light'); ?></div>
       </div>
 
@@ -415,16 +415,16 @@ EOSQL
 ?>
         <hr>
         <div class="row my-1">
-          <div class="col"><?php echo sprintf(TEXT_LAST_RESTORATION, DB_LAST_RESTORE); ?></div>
+          <div class="col"><?= sprintf(TEXT_LAST_RESTORATION, DB_LAST_RESTORE); ?></div>
           <div class="col text-right mr-2">
-          <?php echo tep_draw_bootstrap_button(TEXT_FORGET, 'fas fa-bell-slash', tep_href_link('backup.php', 'action=forget'), null, null, 'btn-light'); ?></div>
+          <?= tep_draw_bootstrap_button(TEXT_FORGET, 'fas fa-bell-slash', tep_href_link('backup.php', 'action=forget'), null, null, 'btn-light'); ?></div>
         </div>
 <?php
   }
 ?>
 
     </div>
-            
+
 <?php
   $heading = [];
   $contents = [];
@@ -459,7 +459,7 @@ EOSQL
 
       $contents = ['form' => tep_draw_form('restore', 'backup.php', 'action=restorelocalnow', 'post', 'enctype="multipart/form-data"')];
       $contents[] = ['text' => TEXT_INFO_RESTORE_LOCAL . '<br><br>' . TEXT_INFO_BEST_THROUGH_HTTPS];
-      $contents[] = ['text' => '<div class="custom-file mb-2">' . tep_draw_input_field('sql_file', '', 'required="required" aria-required="true" id="upload"', 'file', null, 'class="form-control-input"') . '<label class="custom-file-label" for="upload">&nbsp;</label></div>'];
+      $contents[] = ['text' => '<div class="custom-file mb-2">' . tep_draw_input_field('sql_file', '', 'required aria-required="true" id="upload"', 'file', null, 'class="custom-file-input"') . '<label class="custom-file-label" for="upload">&nbsp;</label></div>'];
       $contents[] = ['text' => TEXT_INFO_RESTORE_LOCAL_RAW_FILE];
       $contents[] = ['class' => 'text-center', 'text' => tep_draw_bootstrap_button(IMAGE_RESTORE, 'fas fa-file-upload', null, null, null, 'btn-warning mr-2') . tep_draw_bootstrap_button(IMAGE_CANCEL, 'fas fa-times', tep_href_link('backup.php'), null, null, 'btn-light')];
       break;
@@ -488,7 +488,7 @@ EOSQL
       break;
   }
 
-  if ( (tep_not_null($heading)) && (tep_not_null($contents)) ) {
+  if ( ([] !== $heading) && ([] !== $contents) ) {
     echo '<div class="col-12 col-sm-4">';
       $box = new box;
       echo $box->infoBox($heading, $contents);
@@ -497,7 +497,7 @@ EOSQL
 ?>
 
   </div>
-  
+
   <script>$(document).on('change', '#upload', function (event) { $(this).next('.custom-file-label').html(event.target.files[0].name); });</script>
 
 <?php
